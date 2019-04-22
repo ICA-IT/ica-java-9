@@ -1,0 +1,170 @@
+; ----------------------------------------------------------------
+; Copyright (c) uib gmbh (www.uib.de)
+; This sourcecode is owned by uib
+; and published under the Terms of the General Public License.
+; credits: http://www.opsi.org/en/credits/
+; ----------------------------------------------------------------
+
+;****************************************
+; SETUPTYPE      msi
+;****************************************
+; PRODUCTID      ica-java-9
+; SETUPFILE      3bad6b.msi
+;****************************************
+; LICENSE        false     
+; PRODUCTDESC    Java Run Time Engin version 9.0.4 (64-bit only)
+
+; PRODUCTNAME    Java 9.0.4 (64-bit)
+; PRODUCTSIZE    562 MB
+; PRODUCTVER     9.0.4.0
+;****************************************
+; SETUPSCRIPT    setup.opsiscript
+; UNINSSCRIPT    uninstall.opsiscript
+;****************************************
+; MSIID          {885A3911-0760-5252-92C2-001B92997DEA}
+; USE-MST        
+; INSTALLDIR     (not used)
+;****************************************
+; TIMESTAMP      2/21/2018 18:05:18
+;****************************************
+
+[Actions]
+requiredWinstVersion >= "4.11.4.3"
+ScriptErrorMessages = false
+
+DefVar $SetupType$
+DefVar $ProductId$ 
+DefVar $Setupfile$ 
+DefVar $InstallDir$
+DefVar $MinimumSpace$
+DefVar $ExitCode$
+DefVar $ErrorMsg$
+DefVar $LicenseRequired$
+DefVar $LicenseKey$
+DefVar $LicensePool$
+DefVar $MsiId$
+DefVar $NsisInstallBatch$
+DefVar $LogDir$
+DefVar $WinVer$
+DefVar $WinSysType$
+DefVar $WinTypeExt$
+
+Set $WinVer$ = GetMsVersionInfo
+Set $WinSysType$ = GetSystemType
+
+Set $LogDir$ = "%opsiLogDir%"
+
+include_append "%ScriptPath%\check_msi_exitcode.opsiscript"
+
+; ----------------------------------------------------------------
+Set $SetupType$       = "msi"
+; ----------------------------------------------------------------
+
+; $ProductId$ is the name of the product in opsi, only lower letters, no umlauts, no white spaces, use '-' as a seperator
+Set $ProductId$       = "ica-java-9"
+Set $Setupfile$       = "3bad6b.msi"
+; the path where we find the product after the installation
+Set $InstallDir$      = "(not used)"
+Set $LicenseRequired$ = "false"
+Set $LicensePool$     = "p_" + $ProductId$
+Set $MsiId$           = "{885A3911-0760-5252-92C2-001B92997DEA}"
+Set $MinimumSpace$    = "562 MB"
+; ----------------------------------------------------------------
+; ----------------------------------------------------------------
+
+
+Set $WinTypeExt$ = "x64"
+if ($WinSysType$ = "x86 System") 
+    Set $WinTypeExt$ = "x86"
+endif   
+
+if ( $WinTypeExt$ = "x86" ) 
+   LogError $ProductId$ + " is for use on 64 bit Windows. This system is reporting " + $WinSysType$ + ". Please install ica-java-8 instead."
+   Message "Error: Do not install " + $ProductId$ + " on 32 bit systems... "
+   comment "Please install ica-java-8 instead."
+   isFatalError "Wrong product"
+   ; Stop process and set installation status to failed
+endif
+
+
+if not(HasMinimumSpace ("%SystemDrive%", $MinimumSpace$))
+   LogError "Not enough space on %SystemDrive%, " + $MinimumSpace$ + " on drive %SystemDrive% needed for " + $ProductId$
+   isFatalError "No Space"
+   ; Stop process and set installation status to failed
+else
+   comment "Show product picture"
+   ShowBitmap "%ScriptPath%\" + $ProductId$ + ".png" $ProductId$
+
+   if FileExists("%ScriptPath%\delsub.opsiscript")
+      comment "Start uninstall sub section"
+      Sub "%ScriptPath%\delsub.opsiscript"
+   endif
+   
+   Message "Installing " + $ProductId$ + " ..."
+   
+   if $LicenseRequired$ = "true"
+      comment "Licensing required, reserve license and get license key"
+      Sub_get_licensekey
+   endif
+
+   
+   comment "Start setup program"
+   ChangeDirectory "%SCRIPTPATH%"
+   ;----------------------------------------------
+   Winbatch_install_msi
+   ;----------------------------------------------
+   Sub_check_exitcode	
+endif
+
+
+; ----------------------------------------------------------------
+; install section
+; ----------------------------------------------------------------
+
+[Winbatch_install_msi]
+;msiexec /i "%ScriptPath%\3bad6b.msi"  /l* "$LogDir$\$ProductId$.install_log.txt" /qn ALLUSERS=1 REBOOT=ReallySuppress
+msiexec /i "%ScriptPath%\3bad6b.msi"  /l* "$LogDir$\$ProductId$.install_log.txt" /q ENTERPRISE=YES
+
+; ----------------------------------------------------------------
+
+
+[Sub_get_licensekey]
+if opsiLicenseManagementEnabled
+   comment "License management is enabled and will be used"
+
+   comment "Trying to get a license key"
+   Set $LicenseKey$ = demandLicenseKey ($LicensePool$)
+   ; If there is an assignment of exactly one licensepool to the product the following call is possible:
+   ; Set $LicenseKey$ = demandLicenseKey ("", $ProductId$)
+   ;
+   ; If there is an assignment of a license pool to a windows software id, it is possible to use:
+   ; DefVar $WindowsSoftwareId$
+   ; $WindowsSoftwareId$ = "..."
+   ; Set $LicenseKey$ = demandLicenseKey ("", "", $WindowsSoftwareId$)
+
+   DefVar $ServiceErrorClass$
+   set $ServiceErrorClass$ = getLastServiceErrorClass
+   comment "Error class: " + $ServiceErrorClass$
+   
+   if $ServiceErrorClass$ = "None"
+      comment "Everything fine, we got the license key '" + $LicenseKey$ + "'"
+   else
+      if $ServiceErrorClass$ = "LicenseConfigurationError"
+         LogError "Fatal: license configuration must be corrected"
+         LogError getLastServiceErrorMessage
+         isFatalError
+      else 
+         if $ServiceErrorClass$ = "LicenseMissingError"
+            LogError "Fatal: required license is not supplied"
+            isFatalError
+         endif
+      endif
+   endif
+else
+   LogError "Fatal: license required, but license management not enabled"
+   isFatalError
+endif
+
+; ----------------------------------------------------------------
+; ----------------------------------------------------------------
+

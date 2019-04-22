@@ -1,0 +1,29 @@
+[Package]
+version: 1
+depends: 
+
+[Product]
+type: localboot
+id: ica-java-9
+name: Java 9.0.4 (64-bit)
+description: Java Run Time Engin version 9.0.4 (64-bit only)
+advice: 
+version: 9.0.4.0
+priority: 0
+licenseRequired: False
+productClasses: 
+setupScript: setup.opsiscript
+uninstallScript: uninstall.opsiscript
+updateScript: 
+alwaysScript: 
+onceScript: 
+customScript: 
+userLoginScript: 
+
+[Changelog]
+ica-java-9 (9.0.4.0-1) stable; urgency=low
+
+	* initial: created by opsi-setup-detector
+
+ -- opsisetupdetector.exe <info@uib.de>  2/21/2018 18:05:18
+
